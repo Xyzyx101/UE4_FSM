@@ -1,5 +1,7 @@
 #pragma once
 #include <type_traits>
+#include <memory>
+
 template< class, class = void >
 struct IsSingleDelegate : std::false_type {};
 template< class T >
@@ -10,118 +12,74 @@ struct IsMulticastDelegate : std::false_type {};
 template< class T >
 struct IsMulticastDelegate<T, std::enable_if_t<std::is_member_function_pointer<decltype(&T::Broadcast)>::value>> : std::true_type {};
 
-template<class StateEnum, class StateEvent>
-class State
+template<typename StateEnum, typename StateEventType>
+class IStateBase
 {
 public:
-	State(StateEnum enumType, StateEvent* enter, StateEvent* tick, StateEvent* exit) :
-		Enum(enumType),
+	virtual ~IStateBase() = default;
+	virtual StateEnum GetState() const = 0;
+	virtual void Enter() const = 0;
+	virtual void Tick() const = 0;
+	virtual void Exit() const = 0;
+protected:
+	/*IStateBase() {};
+	IStateBase(const IStateBase& other) = default;
+	IStateBase(IStateBase&& other) = default;*/
+};
+
+template<typename StateEnum, typename StateEventType>
+class State : public IStateBase<StateEnum, StateEventType>
+{
+public:
+	State(StateEnum stateTag, StateEventType* enter, StateEventType* tick, StateEventType* exit) :
+		StateTag(stateTag),
 		EnterEvent(enter),
 		TickEvent(tick),
 		ExitEvent(exit) {
 	}
-	void Enter() const {
+	~State() = default;
+	State(const State& other) = default;
+	State& operator=(const State& other) = default;
+	State(State&& other) = default;
+	State& operator=(State&& other) = default;
+
+	StateEnum GetState() const { return StateTag; }
+	void Enter() const override {
 		if(EnterEvent) {
-			if constexpr(IsSingleDelegate<StateEvent>::value) {
+			if constexpr(IsSingleDelegate<StateEventType>::value) {
 				EnterEvent->ExecuteIfBound();
-			} else if constexpr(IsMulticastDelegate<StateEvent>::value) {
+			} else if constexpr(IsMulticastDelegate<StateEventType>::value) {
 				EnterEvent->Broadcast();
 			} else {
 				static_assert(false, "Unknown delegate type");
 			}
 		}
 	}
-	void Tick() const {
+	void Tick() const override {
 		if(TickEvent) {
-			if constexpr(IsSingleDelegate<StateEvent>::value) {
+			if constexpr(IsSingleDelegate<StateEventType>::value) {
 				TickEvent->ExecuteIfBound();
-			} else if constexpr(IsMulticastDelegate<StateEvent>::value) {
+			} else if constexpr(IsMulticastDelegate<StateEventType>::value) {
 				TickEvent->Broadcast();
 			} else {
 				static_assert(false, "Unknown delegate type");
 			}
 		}
 	}
-	void Exit() const {
+	void Exit() const override {
 		if(ExitEvent) {
-			if constexpr(IsSingleDelegate<StateEvent>::value) {
+			if constexpr(IsSingleDelegate<StateEventType>::value) {
 				ExitEvent->ExecuteIfBound();
-			} else if constexpr(IsMulticastDelegate<StateEvent>::value) {
+			} else if constexpr(IsMulticastDelegate<StateEventType>::value) {
 				ExitEvent->Broadcast();
 			} else {
 				static_assert(false, "Unknown delegate type");
 			}
 		}
 	}
-	const StateEnum Enum;
 protected:
-	StateEvent* EnterEvent;
-	StateEvent* TickEvent;
-	StateEvent* ExitEvent;
+	const StateEnum StateTag;
+	StateEventType* EnterEvent;
+	StateEventType* TickEvent;
+	StateEventType* ExitEvent;
 };
-
-//template<class StateEnum, class StateEvent>
-//class StateBase {
-//public:
-//	StateBase(StateEnum enumType, StateEvent* enter, StateEvent* tick, StateEvent* exit) :
-//		Enum(enumType),
-//		EnterEvent(enter),
-//		TickEvent(tick),
-//		ExitEvent(exit) {
-//	}
-//	StateEnum Enum;
-//
-//protected:
-//	StateEvent* EnterEvent;
-//	StateEvent* TickEvent;
-//	StateEvent* ExitEvent;
-//};
-//
-//template<class StateEnum, class StateEvent, class DelegateType = void>
-//class State {};
-//template<class StateEnum, class StateEvent>
-//class State<StateEnum, StateEvent, typename std::enable_if<IsSingleDelegate<StateEvent>::value>::type> : public StateBase<StateEnum, StateEvent>
-//{
-//public:
-//	State(StateEnum enumType, StateEvent* enter, StateEvent* tick, StateEvent* exit) : StateBase(enumType, enter, tick, exit) {	}
-//
-//	void Enter() const {
-//		if(EnterEvent) {
-//			EnterEvent->ExecuteIfBound();
-//		}
-//	}
-//	void Tick() const {
-//		if(TickEvent) {
-//			TickEvent->ExecuteIfBound();
-//		}
-//	}
-//	void Exit() const {
-//		if(ExitEvent) {
-//			ExitEvent->ExecuteIfBound();
-//		}
-//	}
-//};
-//
-//template<class StateEnum, class StateEvent>
-//class State<StateEnum, StateEvent, typename std::enable_if<IsMulticastDelegate<StateEvent>::value>::type> : public StateBase<StateEnum, StateEvent>
-//{
-//public:
-//	State(StateEnum enumType, StateEvent* enter, StateEvent* tick, StateEvent* exit) : StateBase(enumType, enter, tick, exit) {}
-//
-//	void Enter() {
-//		if(EnterEvent) {
-//			EnterEvent->Broadcast();
-//		}
-//	}
-//	void Tick() {
-//		if(TickEvent) {
-//			TickEvent->Broadcast();
-//		}
-//	}
-//	void Exit() {
-//		if(ExitEvent) {
-//			ExitEvent->Broadcast();
-//		}
-//	}
-//};
-

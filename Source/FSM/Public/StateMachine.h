@@ -1,24 +1,70 @@
 #pragma once
 
-#include "State.h"
-//#include "Substate.h"
 #include <vector>
+#include <memory>
 #include <algorithm>
+#include "State.h"
 
-template<typename StateEnum, typename StateEvent>
+template<typename MachineStateEnum, typename StateEventType>
 class StateMachine
 {
 protected:
-	using StateType = State<StateEnum, StateEvent>;
+	using StateType = State<MachineStateEnum, StateEventType>;
+	using StatePtr = std::unique_ptr<StateType>;
+	static const MachineStateEnum Unitialized = static_cast<MachineStateEnum>(~0);
+	/*
+	Note about the initial state.  States[0] is a hard coded 'initial' state that does nothing.
+	PendingState is the 0 value of the state enum. The first tick will enter whatever state is assigned
+	to 0.  If you want a different first state just call ChangeState at intialization time.
+	Calling	ChangeState in the Enter of a substate can also be used to reset submachines
+	*/
 	StateMachine() :
+		PendingState(static_cast<MachineStateEnum>(0)),
 		StateIdx(0) {
-		States.push_back(StateType(static_cast<StateEnum>(~0), nullptr, nullptr, nullptr));
+		States.emplace_back(std::make_unique<StateType>(Unitialized, nullptr, nullptr, nullptr));
+	}
+public:
+	~StateMachine() = default;
+	StateMachine(const StateMachine& other) :
+		PendingState(other.PendingState),
+		StateIdx(other.StateIdx) {
+		this->States.reserve(other.States.size());
+		for(auto& s : other.States) {
+			this->States.emplace_back(*s);
+		}
+	};
+	StateMachine& operator=(StateMachine other) {
+		std::swap(*this, other);
+		return *this;
+	};
+	StateMachine(StateMachine&& other) = default;
+	StateMachine& operator=(StateMachine&& other) = default;
+
+	template<typename, typename> friend class StateMachine;
+	template<typename, typename, typename> friend class Substate;
+
+protected:
+	// Initialization requires adding states and setting the initial state
+	void AddState(MachineStateEnum state, StateEventType* enter, StateEventType* tick, StateEventType* exit) {
+		checkf(state != Unitialized, TEXT("Reserved for unitialized state"));
+		States.emplace_back(std::make_unique<StateType>(state, enter, tick, exit));
 	}
 
-	// Initialization requires adding states and setting the initial state
-	void AddState(StateEnum state, StateEvent* enter, StateEvent* tick, StateEvent* exit) {
-		checkf(state != static_cast<StateEnum>(~0), TEXT("~0 is reserved for initial state"));
-		States.push_back(StateType(state, enter, tick, exit));
+	// Adds a state that is itself a state machine
+	template<typename SubmachineStateType>
+	StateMachine<SubmachineStateType, StateEventType>& AddSubmachineState(MachineStateEnum state, StateEventType* enter, StateEventType* tick, StateEventType* exit) {
+		checkf(state != Unitialized, TEXT("Reserved for unitialized state"));
+		using SubstateType = Substate<MachineStateEnum, StateEventType, SubmachineStateType>;
+		std::unique_ptr<SubstateType> subStatePtr = std::make_unique<SubstateType>(state, enter, tick, exit);
+		auto& machine = *(subStatePtr->Submachine);
+		States.push_back(std::move(subStatePtr));
+		return machine;
+	}
+
+	// Adds a state to a SubmachineState
+	template<typename SubmachineStateType, typename StateEventType>
+	void AddSubstate(StateMachine<SubmachineStateType, StateEventType>& machine, SubmachineStateType state, StateEventType* enter, StateEventType* tick, StateEventType* exit) {
+		machine.AddState(state, enter, tick, exit);
 	}
 
 	/*
@@ -28,40 +74,34 @@ protected:
 	ChangeState was called.  Tick will fire once and only once each frame on the current state this frame and on the
 	new state next frame.
 	*/
-	void ChangeState(StateEnum newState) {
+	void ChangeState(MachineStateEnum newState) {
 		PendingState = newState;
 	}
 
-	StateEnum GetState() const { return States[StateIdx].Enum; }
+	MachineStateEnum GetState() const { return States[StateIdx].Enum; }
 
 	// The owning class must tick the state machine
 	void TickStateMachine(float dt) {
 		const auto& current = States[StateIdx];
-		if(current.Enum == PendingState) {
-			current.Tick();
+		if(current->GetState() == PendingState) {
+			current->Tick();
 		} else {
-			auto pending = std::find_if(States.begin(), States.end(), [needle = PendingState](const StateType& state) {return state.Enum == needle; });
+			auto pending = std::find_if(States.begin(), States.end(), [needle = PendingState](const auto& state) {return state->GetState() == needle; });
 			if(pending == States.end()) {
 				UE_LOG(LogFSM, Error, TEXT("Attempting to change to unknown state!!!"));
 				return;
 			}
 			StateIdx = std::distance(States.begin(), pending);
-			current.Exit();
-			pending->Enter();
-			pending->Tick();
+			current->Exit();
+			(*pending)->Enter();
+			(*pending)->Tick();
 		}
 	}
 
-	// Initialization requires adding states and setting the initial state
-	/*State<StateEnum, StateEvent>& AddSubstate(StateEnum state, StateEvent* enter, StateEvent* tick, StateEvent* exit) {
-		checkf(state != static_cast<StateEnum>(~0), TEXT("~0 is reserved for initial state"));
-		States.emplace(State<StateEnum, StateEvent>(state, enter, tick, exit));
-		return States.back();
-	}*/
-
 protected:
-	StateEnum PendingState;
-	std::vector<StateType> States;
+	MachineStateEnum PendingState;
+	std::vector<std::unique_ptr<IStateBase<MachineStateEnum, StateEventType>>> States;
 	SIZE_T StateIdx;
 };
 
+#include "Substate.h"

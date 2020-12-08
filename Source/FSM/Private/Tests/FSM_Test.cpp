@@ -3,7 +3,6 @@
 #include "Misc/AutomationTest.h"
 #include "Tests/AutomationCommon.h"
 #include "StateTestLogger.h"
-#include "PingPong.h"
 #include "TestActors.h"
 #include "FSM_Test_Common.h"
 
@@ -191,15 +190,5 @@ bool FPauseTest::RunTest(const FString& Parameters) {
 	ADD_LATENT_AUTOMATION_COMMAND(FDestroyActor(pauseActor));
 	return true;
 }
-
-// initial state is enum 0?  or changestate?
-// Enter Only
-// Enter, Tick, Exit
-// Sequence
-// Pause State
-// ChangeState in constructor
-// ChangeState
-// Substates
-
 
 #endif // WITH_DEV_AUTOMATION_TESTS
