@@ -16,6 +16,16 @@ enum class EActorTestState : uint8
 	Pause,
 	Ping,
 	Pong,
+	Substate_A1,
+	Substate_A2,
+	Substate_A3,
+	Substate_A4,
+	Substate_B1,
+	Substate_B2,
+	Substate_B3,
+	Substate_B4,
+	Substate_Ping,
+	Substate_Pong
 };
 
 DECLARE_DELEGATE(FTestSignature);
@@ -41,6 +51,24 @@ class ATestEnter : public ATestActorBase
 public:
 	ATestEnter();
 	
+private:
+	FTestSignature State1EnterDelegate;
+	FTestSignature State2EnterDelegate;
+
+	UFUNCTION()
+	void State1_Enter();
+	UFUNCTION()
+	void State2_Enter();
+};
+
+UCLASS(Blueprintable)
+class ATestInitialState : public ATestActorBase
+{
+	GENERATED_BODY()
+
+public:
+	ATestInitialState();
+
 private:
 	FTestSignature State1EnterDelegate;
 	FTestSignature State2EnterDelegate;
@@ -143,24 +171,6 @@ private:
 	void Pong();
 };
 
-UENUM()
-enum class EActorTestSubstateA : uint8
-{
-	Substate_A1,
-	Substate_A2,
-	Substate_A3,
-	Substate_A4
-};
-
-UENUM()
-enum class EActorTestSubstateB : uint8
-{
-	Substate_B1,
-	Substate_B2,
-	Substate_B3,
-	Substate_B4
-};
-
 UCLASS(Blueprintable)
 class ATestEnterSubstate : public ATestActorBase
 {
@@ -234,13 +244,6 @@ private:
 	void SubstateB_Exit();
 };
 
-UENUM()
-enum class EActorTestSubstatePingPong : uint8
-{
-	Substate_Ping,
-	Substate_Pong
-};
-
 UCLASS(Blueprintable)
 class ATestPingPongPause : public ATestActorBase
 {
@@ -250,7 +253,7 @@ public:
 	ATestPingPongPause();
 
 	/* Public interface to start or stop */
-	void PingPong(bool shouldRun) { ShouldRun = shouldRun; };
+	void PingPong(bool shouldRun) { bShouldRun = shouldRun; };
 
 private:
 	UFUNCTION()
@@ -272,5 +275,5 @@ private:
 	FTestSignature PauseTickDelegate;
 	FTestSignature SubstatePingEnterDelegate;
 	FTestSignature SubstatePongEnterDelegate;
-	bool ShouldRun;
+	bool bShouldRun;
 };

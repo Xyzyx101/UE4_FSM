@@ -19,7 +19,8 @@ protected:
 	Calling	ChangeState in the Enter of a substate can also be used to reset submachines
 	*/
 	StateMachine() :
-		PendingState(static_cast<MachineStateEnum>(0)),
+		PendingState(Unitialized),
+		InitialState(Unitialized),
 		StateIdx(0) {
 		States.emplace_back(std::make_unique<StateType>(Unitialized, nullptr, nullptr, nullptr));
 	}
@@ -27,6 +28,7 @@ public:
 	~StateMachine() = default;
 	StateMachine(const StateMachine& other) :
 		PendingState(other.PendingState),
+		InitialState(other.InitialState),
 		StateIdx(other.StateIdx) {
 		this->States.reserve(other.States.size());
 		for(auto& s : other.States) {
@@ -41,20 +43,23 @@ public:
 	StateMachine& operator=(StateMachine&& other) = default;
 
 	template<typename, typename> friend class StateMachine;
-	template<typename, typename, typename> friend class Substate;
+	template<typename, typename> friend class Substate;
 
 protected:
 	// Initialization requires adding states and setting the initial state
 	void AddState(MachineStateEnum state, StateEventType* enter, StateEventType* tick, StateEventType* exit) {
 		checkf(state != Unitialized, TEXT("Reserved for unitialized state"));
 		States.emplace_back(std::make_unique<StateType>(state, enter, tick, exit));
+		if(InitialState == Unitialized) {
+			InitialState = state;
+			PendingState = InitialState;
+		}
 	}
 
 	// Adds a state that is itself a state machine
-	template<typename SubmachineStateType>
-	StateMachine<SubmachineStateType, StateEventType>& AddSubmachineState(MachineStateEnum state, StateEventType* enter, StateEventType* tick, StateEventType* exit) {
+	StateMachine<MachineStateEnum, StateEventType>& AddSubmachineState(MachineStateEnum state, StateEventType* enter, StateEventType* tick, StateEventType* exit) {
 		checkf(state != Unitialized, TEXT("Reserved for unitialized state"));
-		using SubstateType = Substate<MachineStateEnum, StateEventType, SubmachineStateType>;
+		using SubstateType = Substate<MachineStateEnum, StateEventType>;
 		std::unique_ptr<SubstateType> subStatePtr = std::make_unique<SubstateType>(state, enter, tick, exit);
 		auto& machine = *(subStatePtr->Submachine);
 		States.push_back(std::move(subStatePtr));
@@ -62,8 +67,7 @@ protected:
 	}
 
 	// Adds a state to a SubmachineState
-	template<typename SubmachineStateType, typename StateEventType>
-	void AddSubstate(StateMachine<SubmachineStateType, StateEventType>& machine, SubmachineStateType state, StateEventType* enter, StateEventType* tick, StateEventType* exit) {
+	void AddSubstate(StateMachine<MachineStateEnum, StateEventType>& machine, MachineStateEnum state, StateEventType* enter, StateEventType* tick, StateEventType* exit) {
 		machine.AddState(state, enter, tick, exit);
 	}
 
@@ -78,7 +82,14 @@ protected:
 		PendingState = newState;
 	}
 
-	MachineStateEnum GetState() const { return States[StateIdx].Enum; }
+	MachineStateEnum GetState() const { return States[StateIdx]->GetState(); }
+
+	void SetInitialState(MachineStateEnum state) {
+		if(PendingState == InitialState) {
+			PendingState = state;
+		}
+		InitialState = state;
+	}
 
 	// The owning class must tick the state machine
 	void TickStateMachine(float dt) {
@@ -100,6 +111,7 @@ protected:
 
 protected:
 	MachineStateEnum PendingState;
+	MachineStateEnum InitialState;
 	std::vector<std::unique_ptr<IStateBase<MachineStateEnum, StateEventType>>> States;
 	SIZE_T StateIdx;
 };

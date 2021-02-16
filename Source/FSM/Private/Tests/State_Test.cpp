@@ -13,11 +13,9 @@ namespace {
 	{
 		TEST,
 		TEST2,
-	};
-	enum class ETestSubState : uint8
-	{
 		SUBSTATE
 	};
+	
 	DECLARE_DELEGATE(FDelegateTestSignature);
 	DECLARE_EVENT(AActor, FEventTestSignature);
 }
@@ -156,11 +154,11 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FStateSubstateTest, "FSM.State.Substate",
 			Enter.BindLambda([&test]() { test.AddWarning("Enter"); });
 			Tick.BindLambda([&test]() { test.AddWarning("Tick"); });
 			Exit.BindLambda([&test]() { test.AddWarning("Exit"); });
-			auto& subMachine = AddSubmachineState<ETestSubState>(ETestState::TEST, &Enter, &Tick, &Exit);
+			auto& subMachine = AddSubmachineState(ETestState::TEST, &Enter, &Tick, &Exit);
 			SubEnter.BindLambda([&test]() {	test.AddWarning("SubEnter"); });
 			SubTick.BindLambda([&test]() { test.AddWarning("SubTick"); });
 			SubExit.BindLambda([&test]() { test.AddWarning("SubExit"); });
-			AddSubstate<ETestSubState, FDelegateTestSignature>(subMachine, ETestSubState::SUBSTATE, &SubEnter, &SubTick, &SubExit);
+			AddSubstate(subMachine, ETestState::SUBSTATE, &SubEnter, &SubTick, &SubExit);
 			AddState(ETestState::TEST2, nullptr, nullptr, nullptr);
 			ChangeState(ETestState::TEST);
 		}

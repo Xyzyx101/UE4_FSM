@@ -2,18 +2,18 @@
 #include "State.h"
 #include "StateMachine.h"
 
-template<typename StateEnum, typename StateEventType, typename MachineStateEnum>
+template<typename StateEnum, typename StateEventType>
 class Substate : public State<StateEnum, StateEventType>
 {
 public:
 	Substate(StateEnum enumType, StateEventType* enter, StateEventType* tick, StateEventType* exit) :
 		State(enumType, enter, tick, exit),
-		Submachine(new StateMachine<MachineStateEnum, StateEventType>{}) {
+		Submachine(new StateMachine<StateEnum, StateEventType>{}) {
 	}
 	~Substate() = default;
 	Substate(const Substate& other) :
 		State(other) {
-		this.Submachine = std::make_unique<StateMachine<MachineStateEnum, StateEventType>>(*other.Submachine);
+		this.Submachine = std::make_unique<StateMachine<StateEnum, StateEventType>>(*other.Submachine);
 	};
 	Substate& operator=(Substate other) {
 		std::swap(*this, other);
@@ -32,6 +32,7 @@ public:
 
 protected:
 	void Enter() const override {
+		Submachine->PendingState = Submachine->InitialState;
 		if(EnterEvent) {
 			if constexpr(IsSingleDelegate<StateEventType>::value) {
 				EnterEvent->ExecuteIfBound();
@@ -57,7 +58,7 @@ protected:
 	void Exit() const override {
 		Submachine->PendingState = Submachine->Unitialized;
 		Submachine->TickStateMachine(0);
-		Submachine->PendingState = static_cast<MachineStateEnum>(0);
+		Submachine->PendingState = static_cast<StateEnum>(0);
 		if(ExitEvent) {
 			if constexpr(IsSingleDelegate<StateEventType>::value) {
 				ExitEvent->ExecuteIfBound();
@@ -68,5 +69,5 @@ protected:
 			}
 		}
 	}
-	std::unique_ptr<StateMachine<MachineStateEnum, StateEventType>> Submachine;
+	std::unique_ptr<StateMachine<StateEnum, StateEventType>> Submachine;
 };

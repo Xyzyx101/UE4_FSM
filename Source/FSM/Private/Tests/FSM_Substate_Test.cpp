@@ -16,7 +16,7 @@ bool FTestSubstateEnterChangeState::Update() {
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSubstateEnterTest, "FSM.SubstateEnter",
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSubstateEnterTest, "FSM.Substate.Enter",
 	(EAutomationTestFlags::ApplicationContextMask & ~EAutomationTestFlags::CommandletContext)
 	| EAutomationTestFlags::ProductFilter)
 	bool FSubstateEnterTest::RunTest(const FString& Parameters) {
@@ -52,7 +52,7 @@ bool FTestSubstateFullChangeState::Update() {
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSubstateFullTest, "FSM.SubstateFull",
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSubstateFullTest, "FSM.Substate.Full",
 	(EAutomationTestFlags::ApplicationContextMask & ~EAutomationTestFlags::CommandletContext)
 	| EAutomationTestFlags::ProductFilter)
 	bool FSubstateFullTest::RunTest(const FString& Parameters) {
@@ -105,6 +105,53 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSubstateFullTest, "FSM.SubstateFull",
 	ADD_LATENT_AUTOMATION_COMMAND(FDestroyActor(substateActor));
 	return true;
 }
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FPingPongPauseShouldRun, ATestPingPongPause*, Actor, bool, bShouldRun);
+bool FPingPongPauseShouldRun::Update() {
+	Actor->PingPong(bShouldRun);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSubstatePingPongPauseTest, "FSM.Substate.PingPongPause",
+	(EAutomationTestFlags::ApplicationContextMask & ~EAutomationTestFlags::CommandletContext)
+	| EAutomationTestFlags::ProductFilter)
+	bool FSubstatePingPongPauseTest::RunTest(const FString& Parameters) {
+	AutomationOpenMap(TEXT("/FSM/Test/TestMap"));
+	UWorld* world = GetAnyGameWorld();
+	ATestPingPongPause* pingPongPauseActor = world->SpawnActor<ATestPingPongPause>();
+	FStateTestLogger<FString>* logger = pingPongPauseActor->RegisterTestRunner(this);
+	logger->ExpectedValues = TArray<FString>{
+		TEXT("Run_Enter"),
+		TEXT("Ping"),
+		TEXT("Pong"),
+		TEXT("Ping"),
+		TEXT("Pong"),
+		TEXT("Pause_Enter"),
+		TEXT("Run_Enter"),
+		TEXT("Ping"),
+		TEXT("Pong"),
+		TEXT("Ping"),
+		TEXT("Pause_Enter"),
+		TEXT("Run_Enter"), // Note always starts on ping even with different exit values
+		TEXT("Ping"),
+		TEXT("Pong"),
+		TEXT("Ping"),
+		TEXT("Pong"),
+	};
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitForTick(4)); // run for 4
+	ADD_LATENT_AUTOMATION_COMMAND(FPingPongPauseShouldRun(pingPongPauseActor, false));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitForTick(3)); // do nothing for 3
+	ADD_LATENT_AUTOMATION_COMMAND(FPingPongPauseShouldRun(pingPongPauseActor, true));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitForTick(3)); // run for 3
+	ADD_LATENT_AUTOMATION_COMMAND(FPingPongPauseShouldRun(pingPongPauseActor, false));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitForTick(3)); // do nothing for 3
+	ADD_LATENT_AUTOMATION_COMMAND(FPingPongPauseShouldRun(pingPongPauseActor, true));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitForTick(4)); // run for 4
+	ADD_LATENT_AUTOMATION_COMMAND(FCheckLogs(logger));
+	ADD_LATENT_AUTOMATION_COMMAND(FDestroyActor(pingPongPauseActor));
+	return true;
+}
+
 
 // initial state is enum 0?  or changestate?
 // ChangeState

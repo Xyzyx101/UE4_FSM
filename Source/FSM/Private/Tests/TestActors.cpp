@@ -47,6 +47,32 @@ void ATestEnter::State2_Enter() {
 	}
 }
 
+/*
+ATestInitialState
+*/
+
+ATestInitialState::ATestInitialState() {
+	State1EnterDelegate.BindUObject(this, &ATestInitialState::State1_Enter);
+	AddState(EActorTestState::State1, &State1EnterDelegate, nullptr, nullptr);
+	State2EnterDelegate.BindUObject(this, &ATestInitialState::State2_Enter);
+	AddState(EActorTestState::State2, &State2EnterDelegate, nullptr, nullptr);
+	SetInitialState(EActorTestState::State2);
+}
+
+void ATestInitialState::State1_Enter() {
+	UE_LOG(LogFSM, Log, TEXT("State1_Enter"));
+	if(Logger) {
+		Logger->Log(TEXT("State1_Enter"));
+	}
+}
+
+void ATestInitialState::State2_Enter() {
+	UE_LOG(LogFSM, Log, TEXT("State2_Enter"));
+	if(Logger) {
+		Logger->Log(TEXT("State2_Enter"));
+	}
+}
+
 
 /*
 ATestEnterTickExit
@@ -223,14 +249,14 @@ ATestEnterSubstate
 
 ATestEnterSubstate::ATestEnterSubstate() {
 	State1EnterDelegate.BindUObject(this, &ATestEnterSubstate::State1_Enter);
-	StateMachine<EActorTestSubstateA, FTestSignature>& state1Machine = AddSubmachineState<EActorTestSubstateA>(EActorTestState::State1, &State1EnterDelegate, nullptr, nullptr);
+	StateMachine<EActorTestState, FTestSignature>& state1Machine = AddSubmachineState(EActorTestState::State1, &State1EnterDelegate, nullptr, nullptr);
 	Substate1EnterDelegate.BindUObject(this, &ATestEnterSubstate::Substate1_Enter);
-	AddSubstate<EActorTestSubstateA, FTestSignature>(state1Machine, EActorTestSubstateA::Substate_A1, &Substate1EnterDelegate, nullptr, nullptr);
+	AddSubstate(state1Machine, EActorTestState::Substate_A1, &Substate1EnterDelegate, nullptr, nullptr);
 
 	State2EnterDelegate.BindUObject(this, &ATestEnterSubstate::State2_Enter);
-	StateMachine<EActorTestSubstateB, FTestSignature>& state2Machine = AddSubmachineState<EActorTestSubstateB>(EActorTestState::State2, &State2EnterDelegate, nullptr, nullptr);
+	StateMachine<EActorTestState, FTestSignature>& state2Machine = AddSubmachineState(EActorTestState::State2, &State2EnterDelegate, nullptr, nullptr);
 	Substate2EnterDelegate.BindUObject(this, &ATestEnterSubstate::Substate2_Enter);
-	AddSubstate<EActorTestSubstateB, FTestSignature>(state2Machine, EActorTestSubstateB::Substate_B1, &Substate2EnterDelegate, nullptr, nullptr);
+	AddSubstate(state2Machine, EActorTestState::Substate_B1, &Substate2EnterDelegate, nullptr, nullptr);
 
 	ChangeState(EActorTestState::State1);
 }
@@ -281,10 +307,10 @@ ATestFullSubstate::ATestFullSubstate() {
 	SubstateBTickDelegate.BindUObject(this, &ATestFullSubstate::SubstateB_Tick);
 	SubstateBExitDelegate.BindUObject(this, &ATestFullSubstate::SubstateB_Exit);
 
-	StateMachine<EActorTestSubstateA, FTestSignature>& state1Machine = AddSubmachineState<EActorTestSubstateA>(EActorTestState::State1, &State1EnterDelegate, &State1TickDelegate, &State1ExitDelegate);
-	AddSubstate<EActorTestSubstateA, FTestSignature>(state1Machine, EActorTestSubstateA::Substate_A1, &SubstateAEnterDelegate, &SubstateATickDelegate, &SubstateAExitDelegate);
-	StateMachine<EActorTestSubstateB, FTestSignature>& state2Machine = AddSubmachineState<EActorTestSubstateB>(EActorTestState::State2, &State2EnterDelegate, &State2TickDelegate, &State2ExitDelegate);
-	AddSubstate<EActorTestSubstateB, FTestSignature>(state2Machine, EActorTestSubstateB::Substate_B1, &SubstateBEnterDelegate, &SubstateBTickDelegate, &SubstateBExitDelegate);
+	StateMachine<EActorTestState, FTestSignature>& state1Machine = AddSubmachineState(EActorTestState::State1, &State1EnterDelegate, &State1TickDelegate, &State1ExitDelegate);
+	AddSubstate(state1Machine, EActorTestState::Substate_A1, &SubstateAEnterDelegate, &SubstateATickDelegate, &SubstateAExitDelegate);
+	StateMachine<EActorTestState, FTestSignature>& state2Machine = AddSubmachineState(EActorTestState::State2, &State2EnterDelegate, &State2TickDelegate, &State2ExitDelegate);
+	AddSubstate(state2Machine, EActorTestState::Substate_B1, &SubstateBEnterDelegate, &SubstateBTickDelegate, &SubstateBExitDelegate);
 	ChangeState(EActorTestState::State1);
 }
 
@@ -373,19 +399,24 @@ FTestSignature SubstatePingEnterDelegate;
 FTestSignature SubstatePongEnterDelegate;
 
 ATestPingPongPause::ATestPingPongPause() :
-	ShouldRun(true) {
+	bShouldRun(true) {
 	RunEnterDelegate.BindUObject(this, &ATestPingPongPause::Run_Enter);
+	RunTickDelegate.BindUObject(this, &ATestPingPongPause::Run_Tick);
 	PauseEnterDelegate.BindUObject(this, &ATestPingPongPause::Pause_Enter);
+	PauseTickDelegate.BindUObject(this, &ATestPingPongPause::Pause_Tick);
 	SubstatePingEnterDelegate.BindUObject(this, &ATestPingPongPause::Ping_Enter);
 	SubstatePongEnterDelegate.BindUObject(this, &ATestPingPongPause::Pong_Enter);
 
 	// Run
-	auto& pingPongMachine = AddSubmachineState<EActorTestSubstatePingPong>(EActorTestState::Run, &RunEnterDelegate, nullptr, nullptr);
-	AddSubstate<EActorTestSubstatePingPong, FTestSignature>(pingPongMachine, EActorTestSubstatePingPong::Substate_Ping, &SubstatePingEnterDelegate, nullptr, nullptr);
-	AddSubstate<EActorTestSubstatePingPong, FTestSignature>(pingPongMachine, EActorTestSubstatePingPong::Substate_Pong, &SubstatePongEnterDelegate, nullptr, nullptr);
+	auto& pingPongMachine = AddSubmachineState(EActorTestState::Run, &RunEnterDelegate, &RunTickDelegate, nullptr);
+	AddSubstate(pingPongMachine, EActorTestState::Substate_Ping, &SubstatePingEnterDelegate, nullptr, nullptr);
+	AddSubstate(pingPongMachine, EActorTestState::Substate_Pong, &SubstatePongEnterDelegate, nullptr, nullptr);
+	
+	//FIXME - this should work
+	//pingPongMachine.SetInitialState(EActorTestState::Substate_Ping);
 
 	// Pause
-	AddState(EActorTestState::Pause, nullptr, &PauseEnterDelegate, nullptr);
+	AddState(EActorTestState::Pause, &PauseEnterDelegate, &PauseTickDelegate, nullptr);
 
 	ChangeState(EActorTestState::Run);
 }
@@ -398,7 +429,7 @@ void ATestPingPongPause::Run_Enter() {
 }
 
 void ATestPingPongPause::Run_Tick() {
-	if(!ShouldRun) {
+	if(!bShouldRun) {
 		ChangeState(EActorTestState::Pause);
 	}
 }
@@ -411,7 +442,7 @@ void ATestPingPongPause::Pause_Enter() {
 }
 
 void ATestPingPongPause::Pause_Tick() {
-	if(ShouldRun) {
+	if(bShouldRun) {
 		ChangeState(EActorTestState::Run);
 	}
 }

@@ -191,4 +191,28 @@ bool FPauseTest::RunTest(const FString& Parameters) {
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FInitialState, "FSM.InitialState",
+	(EAutomationTestFlags::ApplicationContextMask & ~EAutomationTestFlags::CommandletContext)
+	| EAutomationTestFlags::ProductFilter)
+	bool FInitialState::RunTest(const FString& Parameters) {
+	AutomationOpenMap(TEXT("/FSM/Test/TestMap"));
+	UWorld* world = GetAnyGameWorld();
+
+	ATestEnter* defaultInitialActor = world->SpawnActor<ATestEnter>();
+	FStateTestLogger<FString>* defaultLogger = defaultInitialActor->RegisterTestRunner(this);
+
+	ATestInitialState* initialStateActor = world->SpawnActor<ATestInitialState>();
+	FStateTestLogger<FString>* initalStateLogger = initialStateActor->RegisterTestRunner(this);
+
+	defaultLogger->ExpectedValues = TArray<FString>{ TEXT("State1_Enter") };
+	initalStateLogger->ExpectedValues = TArray<FString>{ TEXT("State2_Enter") };
+
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitForTick(1));
+	ADD_LATENT_AUTOMATION_COMMAND(FCheckLogs(defaultLogger));
+	ADD_LATENT_AUTOMATION_COMMAND(FCheckLogs(initalStateLogger));
+	ADD_LATENT_AUTOMATION_COMMAND(FDestroyActor(defaultInitialActor));
+	ADD_LATENT_AUTOMATION_COMMAND(FDestroyActor(initialStateActor));
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS
