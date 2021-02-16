@@ -3,6 +3,7 @@
 #include <vector>
 #include <memory>
 #include <algorithm>
+#include "FSM.h"
 #include "State.h"
 
 template<typename MachineStateEnum, typename StateEventType>
@@ -32,12 +33,11 @@ public:
 		StateIdx(other.StateIdx) {
 		this->States.reserve(other.States.size());
 		for(auto& s : other.States) {
-			this->States.emplace_back(*s);
+			this->States.emplace_back(std::unique_ptr<IStateBase<MachineStateEnum, StateEventType>>(s->Clone()));
 		}
 	};
-	StateMachine& operator=(StateMachine other) {
-		std::swap(*this, other);
-		return *this;
+	StateMachine& operator=(const StateMachine& other) {
+		return *this = StateMachine(other);
 	};
 	StateMachine(StateMachine&& other) = default;
 	StateMachine& operator=(StateMachine&& other) = default;

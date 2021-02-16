@@ -21,6 +21,7 @@ public:
 	virtual void Enter() const = 0;
 	virtual void Tick() const = 0;
 	virtual void Exit() const = 0;
+	virtual IStateBase* Clone() const = 0;
 protected:
 	/*IStateBase() {};
 	IStateBase(const IStateBase& other) = default;
@@ -42,7 +43,9 @@ public:
 	State& operator=(const State& other) = default;
 	State(State&& other) = default;
 	State& operator=(State&& other) = default;
-
+	virtual State* Clone() const {
+		return new State(*this);
+	}
 	StateEnum GetState() const { return StateTag; }
 	void Enter() const override {
 		if(EnterEvent) {

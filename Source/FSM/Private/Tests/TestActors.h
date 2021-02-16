@@ -29,9 +29,11 @@ enum class EActorTestState : uint8
 };
 
 DECLARE_DELEGATE(FTestSignature);
-
+/*
+	Adding this FSM_API export macro is only here to force instantiation of all the templated functions
+*/
 UCLASS(Blueprintable)
-class ATestActorBase : public AActor, public StateMachine<EActorTestState, FTestSignature>
+class FSM_API ATestActorBase : public AActor, public StateMachine<EActorTestState, FTestSignature>
 {
 	GENERATED_BODY()
 
