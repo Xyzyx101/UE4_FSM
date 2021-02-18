@@ -59,11 +59,12 @@ protected:
 	// Adds a state that is itself a state machine
 	StateMachine<MachineStateEnum, StateEventType>& AddSubmachineState(MachineStateEnum state, StateEventType* enter, StateEventType* tick, StateEventType* exit) {
 		checkf(state != Unitialized, TEXT("Reserved for unitialized state"));
-		using SubstateType = Substate<MachineStateEnum, StateEventType>;
+		/*using SubstateType = Substate<MachineStateEnum, StateEventType>;
 		std::unique_ptr<SubstateType> subStatePtr = std::make_unique<SubstateType>(state, enter, tick, exit);
 		auto& machine = *(subStatePtr->Submachine);
 		States.push_back(std::move(subStatePtr));
-		return machine;
+		return machine;*/
+		return *this;
 	}
 
 	// Adds a state to a SubmachineState
@@ -116,4 +117,4 @@ protected:
 	SIZE_T StateIdx;
 };
 
-#include "Substate.h"
+//#include "Substate.h"

@@ -1,4 +1,5 @@
 #pragma once
+#include "FSM.h"
 #include "Misc/AssertionMacros.h"
 #include "Misc/AutomationTest.h"
 #include "Tests/AutomationCommon.h"

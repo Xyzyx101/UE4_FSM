@@ -4,7 +4,7 @@
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogFSM, Log, All);
+FSM_API DECLARE_LOG_CATEGORY_EXTERN(LogFSM, Log, All);
 
 class FFSM : public FDefaultGameModuleImpl
 {

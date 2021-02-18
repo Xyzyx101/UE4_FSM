@@ -49,34 +49,31 @@ public:
 	StateEnum GetState() const { return StateTag; }
 	void Enter() const override {
 		if(EnterEvent) {
+			static_assert(IsSingleDelegate<StateEventType>::value || IsMulticastDelegate<StateEventType>::value, "Unknown delegate type");
 			if constexpr(IsSingleDelegate<StateEventType>::value) {
 				EnterEvent->ExecuteIfBound();
 			} else if constexpr(IsMulticastDelegate<StateEventType>::value) {
 				EnterEvent->Broadcast();
-			} else {
-				static_assert(false, "Unknown delegate type");
 			}
 		}
 	}
 	void Tick() const override {
 		if(TickEvent) {
+			static_assert(IsSingleDelegate<StateEventType>::value || IsMulticastDelegate<StateEventType>::value, "Unknown delegate type");
 			if constexpr(IsSingleDelegate<StateEventType>::value) {
 				TickEvent->ExecuteIfBound();
 			} else if constexpr(IsMulticastDelegate<StateEventType>::value) {
 				TickEvent->Broadcast();
-			} else {
-				static_assert(false, "Unknown delegate type");
 			}
 		}
 	}
 	void Exit() const override {
 		if(ExitEvent) {
+			static_assert(IsSingleDelegate<StateEventType>::value || IsMulticastDelegate<StateEventType>::value, "Unknown delegate type");
 			if constexpr(IsSingleDelegate<StateEventType>::value) {
 				ExitEvent->ExecuteIfBound();
 			} else if constexpr(IsMulticastDelegate<StateEventType>::value) {
 				ExitEvent->Broadcast();
-			} else {
-				static_assert(false, "Unknown delegate type");
 			}
 		}
 	}

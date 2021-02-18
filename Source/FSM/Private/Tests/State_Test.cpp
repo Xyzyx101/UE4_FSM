@@ -1,4 +1,4 @@
-#include "FSM.h"
+
 #include "Misc/AssertionMacros.h"
 #include "Misc/AutomationTest.h"
 #include "Tests/AutomationCommon.h"
@@ -26,8 +26,6 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FStateTest, "FSM.State.Basic",
 	bool FStateTest::RunTest(const FString& Parameters) {
 		{
 			// Single Delegate
-			std::enable_if<IsSingleDelegate<FDelegateTestSignature>::value>::type;
-
 			FDelegateTestSignature enter;
 			enter.BindLambda([this]() {	AddWarning("Enter"); });
 			FDelegateTestSignature tick;
@@ -53,8 +51,6 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FStateTest, "FSM.State.Basic",
 
 		{
 			// Events
-			std::enable_if<IsMulticastDelegate<FEventTestSignature>::value>::type;
-
 			FEventTestSignature enterEvent;
 			enterEvent.AddLambda([this]() {	AddWarning("Enter Event"); });
 			FEventTestSignature tickEvent;

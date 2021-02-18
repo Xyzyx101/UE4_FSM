@@ -13,7 +13,7 @@ public:
 	~Substate() = default;
 	Substate(const Substate& other) :
 		State(other) {
-		this.Submachine = std::make_unique<StateMachine<StateEnum, StateEventType>>(*other.Submachine);
+		this->Submachine = std::make_unique<StateMachine<StateEnum, StateEventType>>(*other.Submachine);
 	};
 	Substate& operator=(Substate other) {
 		std::swap(*this, other);
@@ -34,23 +34,21 @@ protected:
 	void Enter() const override {
 		Submachine->PendingState = Submachine->InitialState;
 		if(EnterEvent) {
+			static_assert(IsSingleDelegate<StateEventType>::value || IsMulticastDelegate<StateEventType>::value, "Unknown delegate type");
 			if constexpr(IsSingleDelegate<StateEventType>::value) {
 				EnterEvent->ExecuteIfBound();
 			} else if constexpr(IsMulticastDelegate<StateEventType>::value) {
 				EnterEvent->Broadcast();
-			} else {
-				static_assert(false, "Unknown delegate type");
 			}
 		}
 	}
 	void Tick() const override {
 		if(TickEvent) {
+			static_assert(IsSingleDelegate<StateEventType>::value || IsMulticastDelegate<StateEventType>::value, "Unknown delegate type");
 			if constexpr(IsSingleDelegate<StateEventType>::value) {
 				TickEvent->ExecuteIfBound();
 			} else if constexpr(IsMulticastDelegate<StateEventType>::value) {
 				TickEvent->Broadcast();
-			} else {
-				static_assert(false, "Unknown delegate type");
 			}
 		}
 		Submachine->TickStateMachine(0);
@@ -60,12 +58,11 @@ protected:
 		Submachine->TickStateMachine(0);
 		Submachine->PendingState = static_cast<StateEnum>(0);
 		if(ExitEvent) {
+			static_assert(IsSingleDelegate<StateEventType>::value || IsMulticastDelegate<StateEventType>::value, "Unknown delegate type");
 			if constexpr(IsSingleDelegate<StateEventType>::value) {
 				ExitEvent->ExecuteIfBound();
 			} else if constexpr(IsMulticastDelegate<StateEventType>::value) {
 				ExitEvent->Broadcast();
-			} else {
-				static_assert(false, "Unknown delegate type");
 			}
 		}
 	}
